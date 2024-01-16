@@ -7,6 +7,10 @@ let camera, scene, renderer;
 let controller1, controller2;
 let raycaster;
 let group;
+let video;
+let wall;
+let flag = true;
+let text;
 
 /** 光線と交差しているオブジェクト */
 const intersected = [];
@@ -31,6 +35,10 @@ const onSelectStart = (event) => {
     const intersections = getIntersections(controller);
     const objects = [];
     for (const intersection of intersections) {
+        if (flag) {
+            scene.add(wall);
+            video.play();
+        }
         const object = intersection.object;
         // コントローラーに付与 (付随して動かすようにする)
         controller.attach(object);
@@ -95,7 +103,13 @@ const animate = () => {
 const loadParts = () => {
     /** GLTFファイルローダー */
     const loader = new GLTFLoader();
-
+    loader.load('./trafficRules.glb', function (gltf) {
+        // モデルの読み込みが成功した際の処理
+        text = gltf.scene;
+        gltf.scene.position.z = -5;
+    }, undefined, function (error) {
+        console.error(error);
+    });
     /** モデルのURL */
     const modelsUrls = ['./jimny.glb']
     // モデルをロードして配置
@@ -194,6 +208,24 @@ const setControllers = () => {
     controller2.add(makeLine(5));
 }
 
+const createwall = () => {
+    const geometry = new THREE.PlaneGeometry(10, 5, 1, 1);
+    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+    wall = new THREE.Mesh(geometry, material);
+    wall.position.z = -5
+    video = document.createElement('video');
+    video.src = './accident.mp4';
+    video.load();
+    // 動画が終わったら壁を消す
+    video.addEventListener('ended', function () {
+        scene.remove(wall);
+        flag = false;
+        scene.add(text);
+    });
+    const videoTexture = new THREE.VideoTexture(video);
+    material.map = videoTexture;
+}
+
 /** 初期化処理 */
 const init = () => {
     // 空間を初期化
@@ -205,6 +237,8 @@ const init = () => {
     // コントローラーを設定
     setControllers()
 
+    // 動画を再生する壁を表示
+    createwall()
 
     // レイキャスティング
     // マウスピッキング（マウスが3D空間のどのオブジェクトの上にあるかを調べること）などに使わる。
